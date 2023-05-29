@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <meta charset='utf-8'/>
+<meta content='width=device-width; initial-scale=1.0; maximum-scale=1.0; user-scalable=0;' name='viewport'/>
+<meta content='IE=9; IE=8; IE=7; IE=EDGE; chrome=1' http-equiv='X-UA-Compatible'/>
+  <title>Movie Mil</title>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
+  <style>
+    .movie-card {
+      cursor: pointer;
+      transition: transform 0.3s;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .movie-card:hover {
+      transform: scale(1.05);
+    }
+
+    .modal-content {
+      max-width: 600px;
+      margin: auto;
+    }
+
+    .modal-body {
+      display: flex;
+      align-items: center;
+    }
+
+    .modal-body img {
+      width: 190px;
+      height: 300px;
+    }
+
+    .modal-body .movie-details {
+      margin-left: 20px;
+    }
+
+    .modal-body .movie-details h5 {
+      font-size: 24px;
+      margin-bottom: 10px;
+    }
+
+    .modal-body .movie-details p {
+      margin-bottom: 5px;
+    }
+
+    .modal-footer .btn {
+      margin-right: 10px;
+    }
+
+    .no-link {
+      color: red;
+    }
+
+    .player-modal-content {
+      max-width: 800px;
+      margin: auto;
+    }
+
+    .player-modal-content video {
+      width: 100%;
+      height: 100%;
+    }
+   .card-title{overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;}
+    
+    #modal-link{overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;}
+    .col h5{overflow: hidden;
+  text-overflow: ellipsis;
+      font-weight:500;
+      font-size:10px;
+  width: 100%;}
+
+  </style>
+</head>
+
+<body>
+  <div class="container mt-4">
+    <div class="row">
+      <div class="col">
+        <div class="input-group mb-3">
+          <input type="text" id="search-input" class="form-control" placeholder="Digite o nome do filme">
+          <div class="input-group-append">
+            <button class="btn btn-primary" type="button" id="search-btn">Pesquisar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="row" id="search-results"></div>
+  </div>
+
+  <!-- Movie Modal -->
+  <div class="modal fade" id="movieModal" tabindex="-1" role="dialog" aria-labelledby="movieModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="movieModalLabel">Detalhes do Filme</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Fechar">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="row">
+            <div class="col">
+              <img id="modal-img" src="" alt="Capa do Filme" class="img-fluid">
+            </div>
+            <div class="col movie-details">
+              <h5 id="modal-title"></h5>
+              <p id="modal-id"></p>
+              <p id="modal-link" class="linkfilm"></p>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary copy-link" data-dismiss="modal">Copiar Link</button>
+          <button type="button" class="btn btn-primary play-button" data-dismiss="modal">Play</button>
+         <button type="button" class="btn btn-danger" data-dismiss="modal">Reportar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Player Modal -->
+  <div class="modal fade" id="playerModal" tabindex="-1" role="dialog" aria-labelledby="playerModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content player-modal-content">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Fechar">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        <div class="modal-body">
+          <video id="video-player"><source type="video/mp4" id="video-source"/>
+          </video>
+          
+        </div>
+      </div>
+    </div>
+
+  </div>
+  
+  
+  <script>// Obter o URL atual da página
+var url = window.location.href;
+
+// Verificar se o último caractere é uma barra ("/")
+if (url.slice(-1) === '/') {
+  // Remover a última barra
+  var novaUrl = url.slice(0, -1);
+  
+  // Substituir a URL sem a última barra
+  window.history.replaceState(null, '', novaUrl);
+}
+</script>
+
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
+  <script src="https://cdn.fluidplayer.com/v3/current/fluidplayer.min.js"></script>
+
+  <script>
+    const apiKey = "dd8b9b0ba16a7a2e167615c6de0d99a0";
+    const searchUrl = `https://api.themoviedb.org/3/search/movie?api_key=${apiKey}&language=pt-BR&include_adult=false`;
+    const jsonDataUrl = "https://script.google.com/macros/s/AKfycbx1HiW2FzmZ9SKf1OzOhZfA1I0jpTWTceT3x9DujrGSaGw7vfxDhxK8TYCN_d6bsQR5wg/exec";
+
+    function searchMovies() {
+      const query = document.getElementById('search-input').value.trim();
+      if (query === "") {
+        return;
+      }
+
+      const url = `${searchUrl}&query=${encodeURIComponent(query)}`;
+      fetch(url)
+        .then(response => response.json())
+        .then(data => {
+          const movies = data.results;
+          renderMovies(movies);
+        });
+    }
+
+    function renderMovies(movies) {
+      const searchResults = document.getElementById('search-results');
+      searchResults.innerHTML = "";
+
+      movies.forEach(movie => {
+        const movieCard = document.createElement('div');
+        movieCard.classList.add('col-6', 'col-sm-4', 'col-md-3', 'col-lg-2', 'mb-3');
+        movieCard.innerHTML = `
+          <div class="movie-card">
+            <img src="https://image.tmdb.org/t/p/w200${movie.poster_path}" alt="${movie.title}" class="card-img-top">
+            <div class="card-body">
+              <h5 class="card-title">${movie.title}</h5>
+              <p class="card-text">${movie.id}</p>
+            </div>
+          </div>
+        `;
+
+        movieCard.addEventListener('click', () => showMovieDetails(movie));
+        searchResults.appendChild(movieCard);
+      });
+    }
+
+
+    
+    function showMovieDetails(movie) {
+      const movieModal = document.getElementById('movieModal');
+      const modalImg = document.getElementById('modal-img');
+      const modalTitle = document.getElementById('modal-title');
+      
+      const modalId = document.getElementById('modal-id');
+      const modalLink = document.getElementById('modal-link');
+      const copyLinkBtn = document.querySelector('#movieModal .copy-link');
+      const playBtn = document.querySelector('#movieModal .play-button');
+      
+      
+      modalImg.src = `https://image.tmdb.org/t/p/w300${movie.poster_path}`;
+      modalTitle.textContent = movie.title;
+      modalId.textContent = `ID do Filme: ${movie.id}`;
+
+     function truncateText(text, maxLength) {
+  if (text.length > maxLength) {
+    return text.substring(0, maxLength) + '...';
+  }
+  return text;
+}
+
+      
+      fetch(jsonDataUrl)
+  .then(response => response.json())
+  .then(data => {
+    const foundMovie = data.find(item => item.id === movie.id);
+    if (foundMovie) {
+      const truncatedText = truncateText(foundMovie.mp4Url, 13); // Limite de 30 caracteres
+      modalLink.textContent = `Link do Filme: ${truncatedText}`;
+      modalLink.classList.remove('no-link');
+      copyLinkBtn.style.display = 'inline-block';
+      playBtn.style.display = 'inline-block';
+      playBtn.dataset.url = foundMovie.mp4Url;
+    } else {
+      modalLink.textContent = "Não há Link Desse Filme";
+      modalLink.classList.add('no-link');
+      copyLinkBtn.style.display = 'none';
+      playBtn.style.display = 'none';
+    }
+  });
+
+      movieModal.classList.add('show');
+      movieModal.style.display = 'block';
+    }
+
+    function copyMovieLink() {
+      const modalLink = document.getElementById('modal-link');
+      const dummyInput = document.createElement('input');
+      dummyInput.value = modalLink.textContent;
+      document.body.appendChild(dummyInput);
+      dummyInput.select();
+      document.execCommand('copy');
+      document.body.removeChild(dummyInput);
+    }
+
+    function playMovie() {
+      const playBtn = document.querySelector('#movieModal .play-button');
+      const videoSource = document.getElementById('video-source');
+      const videoPlayer = document.getElementById('video-player');
+      videoSource.src = playBtn.dataset.url;
+      videoPlayer.load();
+      videoPlayer.play();
+
+      const playerModal = document.getElementById('playerModal');
+      playerModal.classList.add('show');
+      playerModal.style.display = 'block';
+    }
+
+    function closeModal() {
+      const modals = document.getElementsByClassName('modal');
+      Array.from(modals).forEach(modal => {
+        modal.classList.remove('show');
+        modal.style.display = 'none';
+      });
+
+      const videoPlayer = document.getElementById('video-player');
+      videoPlayer.pause();
+      videoPlayer.currentTime = 0;
+    }
+
+    document.getElementById('search-btn').addEventListener('click', searchMovies);
+    document.getElementById('search-input').addEventListener('keydown', event => {
+      if (event.key === "Enter") {
+        searchMovies();
+      }
+    });
+
+    document.querySelector('#movieModal .copy-link').addEventListener('click', copyMovieLink);
+    document.querySelector('#movieModal .play-button').addEventListener('click', playMovie);
+    document.querySelectorAll('.modal .close, .modal .cancel-button').forEach(btn => {
+      btn.addEventListener('click', closeModal);
+    });
+  </script> 
+</body>
+</html>
